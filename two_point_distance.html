@@ -1,0 +1,310 @@
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+</head>
+<body>
+
+<style>
+body {
+  font-size: 0.8em;
+}
+
+#map-container, #side-container, #side-container li {
+  float: left;
+}
+
+#map-container {
+  width: 70%;
+  height: 600px;
+}
+
+#side-container {
+  border: 1px solid #bbb;
+  margin-right: 5px;
+  padding: 2px 4px;
+  text-align: right;
+  width: 260px;
+}
+#side-container ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+#side-container li input {
+  font-size: 0.85em;
+  width: 210px;
+}
+#side-container .dir-label {
+  font-weight: bold;
+  padding-right: 3px;
+  text-align: right;
+  width: 40px;
+}
+
+#dir-container {
+  height: 525px;
+  overflow: auto;
+  padding: 2px 4px 2px 0;
+}
+#dir-container table {
+  font-size: 1em;
+  width: 100%;
+}
+</style>
+
+<div id="side-container">
+  <ul>
+    <li class="dir-label">From:</li>
+    <li><input id="from-input" type=text value="kanpur" /></li>
+    <br clear="both"/>
+    <li class="dir-label">To:</li>
+    <li><input id="to-input" type=text value="gwalior" /></li>
+  </ul>
+  <div>
+    <select onChange="Demo.getDirections();" id="travel-mode-input">
+      <option value="driving" selected="selected">By car</option>
+      <option value="bicycling">Bicycling</option>
+      <option value="walking">Walking</option>
+    </select>
+    <select onChange="Demo.getDirections();" id="unit-input">
+       <option value="metric" selected="selected">Metric</option>
+      <option value="imperial" >Imperial</option>
+    </select>
+    <input onClick="Demo.getDirections();" type=button value="Go!"/>
+  </div>
+  <div id="dir-container"></div>
+</div>
+
+<div id="side-container" style="height:600px;">
+  <ul>
+    <li class="dir-label" style="width:120px;text-align: left;">Starting City </li>
+    <li>: <span id="source_city"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">Destination City </li>
+    <li>: <span id="destination_city"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+  <li class="dir-label" style="width:120px;text-align: left;">Starting Point </li>
+    <li>: <span id="source"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">End Point </li>
+    <li>: <span id="destination"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>  
+    
+    <li class="dir-label" style="width:120px;text-align: left;">Date Of Journey:</li>
+    <li>: <span id="doj"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">Time Of Journey</li>
+    <li>: <span id="toj"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">Journey Mid Point</li>
+    <li>: <span id="jmd"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">Seats</li>
+    <li>: <span id="seats"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">Fare </li>
+    <li>: <span id="fare"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">Service Provider</li>
+    <li>: <span id="serviceprovidor"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+    <li class="dir-label" style="width:120px;text-align: left;">Email Id</li>
+    <li> :<span id="email"></span></li>
+    <br clear="both"/>
+    <br clear="both"/>
+        <li class="dir-label" style="width:120px;text-align: left;">Provider rating :</li>
+
+    
+    <li class="dir-label" style="width:120px;text-align: left;"></li>
+    <li><span id=""><div class="rate-ex1-cnt"><div id="1" class="rate-btn-1 rate-btn"></div><div id="2" class="rate-btn-2 rate-btn"></div><div id="3" class="rate-btn-3 rate-btn"></div><div id="4" class="rate-btn-4 rate-btn"></div><div id="5" class="rate-btn-5 rate-btn"></div><div id="carpool" class=""></div></div></span></li>
+  </ul>
+  
+  <div id="dir-container"></div>
+</div>
+<input type="hidden" name="userid" id="userid">
+<div id="map-container" style="width:700px;"></div>
+
+<script type="text/javascript">
+var Demo = {
+  // HTML Nodes
+  mapContainer: document.getElementById('map-container'),
+  dirContainer: document.getElementById('dir-container'),
+  fromInput: document.getElementById('from-input'),
+  toInput: document.getElementById('to-input'),
+  travelModeInput: document.getElementById('travel-mode-input'),
+  unitInput: document.getElementById('unit-input'),
+
+  // API Objects
+  dirService: new google.maps.DirectionsService(),
+  dirRenderer: new google.maps.DirectionsRenderer(),
+  map: null,
+
+  showDirections: function(dirResult, dirStatus) {
+    if (dirStatus != google.maps.DirectionsStatus.OK) {
+      //alert('Directions failed: ' + dirStatus);
+      return;
+    }
+
+    // Show directions
+    Demo.dirRenderer.setMap(Demo.map);
+    Demo.dirRenderer.setPanel(Demo.dirContainer);
+    Demo.dirRenderer.setDirections(dirResult);
+  },
+
+  getSelectedTravelMode: function() {
+    var value =
+        Demo.travelModeInput.options[Demo.travelModeInput.selectedIndex].value;
+    if (value == 'driving') {
+      value = google.maps.DirectionsTravelMode.DRIVING;
+    } else if (value == 'bicycling') {
+      value = google.maps.DirectionsTravelMode.BICYCLING;
+    } else if (value == 'walking') {
+      value = google.maps.DirectionsTravelMode.WALKING;
+    } else {
+      alert('Unsupported travel mode.');
+    }
+    return value;
+  },
+
+  getSelectedUnitSystem: function() {
+    return Demo.unitInput.options[Demo.unitInput.selectedIndex].value == 'metric' ?
+        google.maps.DirectionsUnitSystem.METRIC :
+        google.maps.DirectionsUnitSystem.IMPERIAL;
+  },
+
+  getDirections: function() {
+       var fromStr = $('#from-input').val();
+      var toStr = $('#to-input').val();
+    var dirRequest = {
+      origin: fromStr,
+      destination: toStr,
+      travelMode: Demo.getSelectedTravelMode(),
+      unitSystem: Demo.getSelectedUnitSystem(),
+      provideRouteAlternatives: true
+    };
+    Demo.dirService.route(dirRequest, Demo.showDirections);
+  },
+
+  init: function() {
+	  var param=parseURLParams(window.location.href);
+	 
+    var latLng = new google.maps.LatLng(39.778182, -86.152300);
+    Demo.map = new google.maps.Map(Demo.mapContainer, {
+      zoom: 13,
+      center: latLng,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+
+    // Show directions onload
+    Demo.getDirections();
+  }
+};
+
+  function parseURLParams(url) {
+  	  var queryStart = url.indexOf("?") + 1;
+  	  var queryEnd   = url.indexOf("#") + 1 || url.length + 1;
+  	  var query      = url.slice(queryStart, queryEnd - 1);
+
+  	  if (query === url || query === "") return;
+
+  	  var params  = {};
+  	  var nvPairs = query.replace(/\+/g, " ").split("&");
+
+  	  for (var i=0; i<nvPairs.length; i++) {
+  	    var nv = nvPairs[i].split("=");
+  	    var n  = decodeURIComponent(nv[0]);
+  	    var v  = decodeURIComponent(nv[1]);
+  	    if ( !(n in params) ) {
+  	      params[n] = [];
+  	    }
+  	    params[n].push(nv.length === 2 ? v : null);
+  	  }
+  	  return params;
+  	}
+
+
+// Onload handler to fire off the app.
+google.maps.event.addDomListener(window, 'load', Demo.init);
+</script>
+
+
+<script>
+
+
+
+  function getRating(carpoolid)
+  {
+	var dataRate = 'action=getRating&carpoolid='+carpoolid; //
+	$.ajax({
+		type : "POST",
+		url : "webapi/rating.php",
+		data: dataRate,
+		dataType: "json",
+		success:function(data){
+			if(data.status == '200'){
+				$.each(data.ratingData, function(index,value){
+					$('#carpool-'+value.carpoolid).text(value.calculateRate+'/5');
+					for(var i = 1; i <= 5; i++){
+						 $('#'+i).removeClass('rate-btn-hover');
+						 $('#'+i).removeClass('rate-btn-active');
+					}
+					for(var i = 1; i <= value.calculateRate; i++){
+						 $('#'+i).addClass('rate-btn-hover');
+						 $('#'+i).addClass('rate-btn-active');
+					}
+				});
+			}
+		}
+	});
+  }
+
+function getCarpoolContent(carpoolId)
+{
+	var request = $.ajax({
+	cache:false,
+	url: 'webapi/carpool.php',
+	type: "GET",
+	data: { carpoolId : carpoolId},
+	dataType: "json",
+	success: function(data) {
+		  getRating(data.user_name);
+		  	$('#userid').val(data.user_name);
+			$('#source').text(data.source);
+			$('#destination').text(data.destination);
+			$('#source_city').text(data.source_city);
+			$('#destination_city').text(data.destination_city);
+			$('#toj').text(data.time);
+			$('#jmd').text(data.journey_points);
+			$('#seats').text(data.seat);
+			$('#fare').text(data.cost);
+			$('#serviceprovidor').text(data.display_name);
+			$('#email').text(data.email);
+			date = data.date.substring(0, 10);
+			var jsDate = new Date(date*1000)
+			year    = jsDate.getFullYear ();
+			month   = jsDate.getMonth ();
+			day     = jsDate.getDate ();
+			var monthNames = [ "January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December" ];
+			newDate =   day + "-" + monthNames[month] + "-" +year;
+			$('#doj').text(newDate);
+		}
+	});
+	
+}
+</script>
+</body>
+</html>
